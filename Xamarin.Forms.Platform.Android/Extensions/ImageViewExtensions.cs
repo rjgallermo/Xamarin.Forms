@@ -29,18 +29,28 @@ namespace Xamarin.Forms.Platform.Android
 
 			ImageSource source = newImage?.Source;
 			Bitmap bitmap = null;
+            int drawableResourceId = 0;
+
 			IImageSourceHandler handler;
 
 			if (source != null && (handler = Internals.Registrar.Registered.GetHandlerForObject<IImageSourceHandler>(source)) != null)
 			{
-				try
-				{
-					bitmap = await handler.LoadImageAsync(source, imageView.Context);
-				}
-				catch (TaskCanceledException)
-				{
-					imageController?.SetIsLoading(false);
-				}
+                if(handler is FileImageSourceHandler)
+                {
+                    drawableResourceId = ResourceManager.GetDrawableByName(((FileImageSource)source).File);
+                }
+
+                if(drawableResourceId == 0)
+                {
+                    try
+                    {
+                        bitmap = await handler.LoadImageAsync(source, imageView.Context);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        imageController?.SetIsLoading(false);
+                    }
+                }
 			}
 
 			if (newImage == null || !Equals(newImage.Source, source))
@@ -51,8 +61,8 @@ namespace Xamarin.Forms.Platform.Android
 
 			if (!imageView.IsDisposed())
 			{
-				if (bitmap == null && source is FileImageSource)
-					imageView.SetImageResource(ResourceManager.GetDrawableByName(((FileImageSource)source).File));
+                if (bitmap == null && drawableResourceId > 0)
+                    imageView.SetImageResource(drawableResourceId);
 				else
 				{
 					imageView.SetImageBitmap(bitmap);
